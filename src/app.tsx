@@ -44,6 +44,10 @@ export const App = () => {
 
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [context, setContext] = useState("");
+  const [textElements, setTextElements] = useState<{ id: string; text: string }[]>([]);
+  const [translations, setTranslations] = useState<{ id: string; translation: string }[]>([]);
+
+
 
   useEffect(() => {
     const unregister = selection.registerOnChange({
@@ -59,7 +63,7 @@ export const App = () => {
           }));
   
           console.log("Atlasītie teksti:", elements);
-          // TODO: setTextElements(elements) ja vēlies saglabāt state
+          setTextElements(elements);
         } catch (error) {
           console.error("Neizdevās nolasīt atlasītos tekstus:", error);
         }
@@ -88,6 +92,44 @@ export const App = () => {
   const toggleAllLanguages = () => {
     setSelectedLanguages(isAllSelected ? [] : allLanguages.map((l) => l.value));
   };
+
+  const translateTexts = async () => {
+    const prompt = `
+  You are a professional translator.
+  
+  Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
+  Return the result only as a valid JSON object where keys are language codes and values are arrays of:
+  [
+    { "id": "abc", "translation": "..." }
+  ]
+  
+  Each translation must:
+  - be as close in meaning and tone to the original as possible,
+  - match the original text length as closely as possible (character count),
+  - avoid line breaks unless they are in the original.
+  
+  Context: ${context}
+  
+  Original texts:
+  ${JSON.stringify(textElements, null, 2)}
+    `;
+  
+    const response = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
+
+
+
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+  
+    const data = await response.json();
+    const firstLang = selectedLanguages[0];
+    if (data[firstLang]) {
+      setTranslations(data[firstLang]);
+    }
+  };
+  
 
   const onClick = () => {
     addElement({
@@ -161,13 +203,23 @@ export const App = () => {
           </div>
         </div>
 
-        <Button variant="primary" onClick={onClick} stretch>
-          {intl.formatMessage({
-            defaultMessage: "Do something cool",
-            description:
-              "Button text to do something cool. Creates a new text element when pressed.",
-          })}
+        <Button variant="primary" onClick={translateTexts} stretch>
+          Translate
         </Button>
+
+          {translations.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-md font-semibold mb-2">
+              Translation preview ({selectedLanguages[0]}):
+            </h3>
+            {translations.map((t) => (
+              <div key={t.id} className="mb-1 text-sm">
+                • {t.translation}
+              </div>
+            ))}
+          </div>
+        )}
+
 
         <Button variant="secondary" onClick={() => openExternalUrl(DOCS_URL)}>
           {intl.formatMessage({

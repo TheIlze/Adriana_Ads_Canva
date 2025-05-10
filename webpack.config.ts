@@ -172,7 +172,7 @@ export function buildConfig({
     },
     plugins: [
       new DefinePlugin({
-        BACKEND_HOST: JSON.stringify(backendHost),
+        "process.env.CANVA_BACKEND_HOST": JSON.stringify(backendHost),
       }),
       // Apps can only submit a single JS file via the developer portal
       new optimize.LimitChunkCountPlugin({ maxChunks: 1 }),

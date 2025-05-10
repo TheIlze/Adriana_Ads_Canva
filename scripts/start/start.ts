@@ -6,6 +6,10 @@ import { hideBin } from "yargs/helpers";
 import { Context } from "./context";
 import * as prompts from "prompts";
 
+console.log("ENV CANVA_APP_ID:", process.env.CANVA_APP_ID);
+console.log("ENV CANVA_HMR_ENABLED:", process.env.CANVA_HMR_ENABLED);
+
+
 const appRunner = new AppRunner();
 
 yargs(hideBin(process.argv))
