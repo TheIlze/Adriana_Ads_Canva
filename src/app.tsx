@@ -3,7 +3,8 @@ import { requestOpenExternalUrl } from "@canva/platform";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as styles from "styles/components.css";
 import { useAddElement } from "utils/use_add_element";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { selection, SelectionScope } from "@canva/design";
 
 export const DOCS_URL = "https://www.canva.dev/docs/apps/";
 
@@ -44,6 +45,36 @@ export const App = () => {
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [context, setContext] = useState("");
 
+  useEffect(() => {
+    const unregister = selection.registerOnChange({
+      scope: "plaintext",
+      onChange: async (event) => {
+        try {
+          const draft = await event.read();
+          const contents = draft.contents;
+  
+          const elements = contents.map((content, index) => ({
+            id: `text-${index}`,
+            text: content.text,
+          }));
+  
+          console.log("Atlasītie teksti:", elements);
+          // TODO: setTextElements(elements) ja vēlies saglabāt state
+        } catch (error) {
+          console.error("Neizdevās nolasīt atlasītos tekstus:", error);
+        }
+      },
+    });
+  
+    return () => {
+      unregister();
+    };
+  }, []);
+  
+  
+  
+  
+
   const isAllSelected = selectedLanguages.length === allLanguages.length;
 
   const toggleLanguage = (value: string) => {
@@ -76,19 +107,6 @@ export const App = () => {
   return (
     <div className="p-4">
       <Rows spacing="2u">
-        <Text>
-          <FormattedMessage
-            defaultMessage="
-              To make changes to this app, edit the <code>src/app.tsx</code> file,
-              then close and reopen the app in the editor to preview the changes.
-            "
-            description="Instructions for how to make changes to the app. Do not translate <code>src/app.tsx</code>."
-            values={{
-              code: (chunks) => <code>{chunks}</code>,
-            }}
-          />
-        </Text>
-
         {/* Konteksts tulkošanai */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2">Context for translation</h3>
@@ -96,8 +114,6 @@ export const App = () => {
             placeholder="e.g. Ad for promoting 10 day slimming challenge"
             value={context}
             onChange={(value) => setContext(value)}
-            rows={2}
-
           />
         </div>
 
