@@ -1,4 +1,4 @@
-import { Button, Rows, Text } from "@canva/app-ui-kit";
+import { Button, Rows, Text, MultilineInput } from "@canva/app-ui-kit";
 import { requestOpenExternalUrl } from "@canva/platform";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as styles from "styles/components.css";
@@ -42,6 +42,7 @@ export const App = () => {
   const intl = useIntl();
 
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [context, setContext] = useState("");
 
   const isAllSelected = selectedLanguages.length === allLanguages.length;
 
@@ -88,6 +89,18 @@ export const App = () => {
           />
         </Text>
 
+        {/* Konteksts tulkošanai */}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">Context for translation</h3>
+          <MultilineInput
+            placeholder="e.g. Ad for promoting 10 day slimming challenge"
+            value={context}
+            onChange={(value) => setContext(value)}
+            rows={2}
+
+          />
+        </div>
+
         {/* Valodu izvēle */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2">Select languages</h3>
@@ -130,7 +143,6 @@ export const App = () => {
               ))}
             </div>
           </div>
-
         </div>
 
         <Button variant="primary" onClick={onClick} stretch>
