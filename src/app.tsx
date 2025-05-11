@@ -1,14 +1,13 @@
-import { Button, Rows, Text, MultilineInput } from "@canva/app-ui-kit";
+import { Button, Rows, MultilineInput } from "@canva/app-ui-kit";
 import { requestOpenExternalUrl } from "@canva/platform";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as styles from "styles/components.css";
 import { useAddElement } from "utils/use_add_element";
 import { useState, useEffect } from "react";
-import { selection, SelectionScope } from "@canva/design";
+import { selection } from "@canva/design";
 
 export const DOCS_URL = "https://www.canva.dev/docs/apps/";
 
-// Valodu saraksts
 const allLanguages = [
   { label: "ar – Arabic", value: "ar" },
   { label: "bg – Bulgarian", value: "bg" },
@@ -45,9 +44,8 @@ export const App = () => {
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [context, setContext] = useState("");
   const [textElements, setTextElements] = useState<{ id: string; text: string }[]>([]);
-  const [translations, setTranslations] = useState<{ id: string; translation: string }[]>([]);
-
-
+  const [translationsByLang, setTranslationsByLang] = useState<{ [lang: string]: { id: string; translation: string }[] }>({});
+  const [sourceLanguage, setSourceLanguage] = useState<string>("en");
 
   useEffect(() => {
     const unregister = selection.registerOnChange({
@@ -56,28 +54,21 @@ export const App = () => {
         try {
           const draft = await event.read();
           const contents = draft.contents;
-  
+
           const elements = contents.map((content, index) => ({
             id: `text-${index}`,
             text: content.text,
           }));
-  
-          console.log("Atlasītie teksti:", elements);
+
           setTextElements(elements);
         } catch (error) {
-          console.error("Neizdevās nolasīt atlasītos tekstus:", error);
+          console.error("Neizdevās nolasīt tekstus:", error);
         }
       },
     });
-  
-    return () => {
-      unregister();
-    };
+
+    return () => unregister();
   }, []);
-  
-  
-  
-  
 
   const isAllSelected = selectedLanguages.length === allLanguages.length;
 
@@ -95,63 +86,58 @@ export const App = () => {
 
   const translateTexts = async () => {
     const prompt = `
-  You are a professional translator.
-  
-  Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
-  Return the result only as a valid JSON object where keys are language codes and values are arrays of:
-  [
-    { "id": "abc", "translation": "..." }
-  ]
-  
-  Each translation must:
-  - be as close in meaning and tone to the original as possible,
-  - match the original text length as closely as possible (character count),
-  - avoid line breaks unless they are in the original.
-  
-  Context: ${context}
-  
-  Original texts:
-  ${JSON.stringify(textElements, null, 2)}
+You are a professional translator.
+
+Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
+Return the result only as a valid JSON object where keys are language codes and values are arrays of:
+[
+  { "id": "abc", "translation": "..." }
+]
+
+Each translation must:
+- be as close in meaning and tone to the original as possible,
+- match the original text length as closely as possible (character count),
+- avoid line breaks unless they are in the original.
+
+Context: ${context}
+
+Original texts:
+${JSON.stringify(textElements, null, 2)}
     `;
-  
+
     const response = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
-
-
-
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
-  
-    const data = await response.json();
-    const firstLang = selectedLanguages[0];
-    if (data[firstLang]) {
-      setTranslations(data[firstLang]);
-    }
-  };
-  
 
-  const onClick = () => {
-    addElement({
-      type: "text",
-      children: ["Hello world!"],
+    const data = await response.json();
+    setTranslationsByLang(data);
+
+    const detectionPrompt = `Detect the language of the following text:\n\n${textElements.map(e => e.text).join("\n")}`;
+    const detectionRes = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: detectionPrompt }),
     });
+
+    const detectionData = await detectionRes.json();
+    const detectedLang = detectionData.text?.trim().toLowerCase() || "en";
+    setSourceLanguage(detectedLang);
   };
 
   const openExternalUrl = async (url: string) => {
     const response = await requestOpenExternalUrl({ url });
-
     if (response.status === "aborted") {
-      // user decided not to navigate to the link
+      // user aborted
     }
   };
 
   return (
     <div className="p-4">
       <Rows spacing="2u">
-        {/* Konteksts tulkošanai */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Context for translation</h3>
+          <h3 className="text-lg font-semibold mb-1">Context for translation</h3>
           <MultilineInput
             placeholder="e.g. Ad for promoting 10 day slimming challenge"
             value={context}
@@ -159,10 +145,8 @@ export const App = () => {
           />
         </div>
 
-        {/* Valodu izvēle */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Select languages</h3>
-
+          <h3 className="text-lg font-semibold mb-1">Select languages</h3>
           <div className="flex items-center mb-3">
             <input
               type="checkbox"
@@ -172,7 +156,6 @@ export const App = () => {
             />
             <label className="text-sm font-medium">Select all</label>
           </div>
-
           <div style={{ display: "flex", gap: "1rem" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1 }}>
               {allLanguages.slice(0, Math.ceil(allLanguages.length / 2)).map((lang) => (
@@ -207,25 +190,62 @@ export const App = () => {
           Translate
         </Button>
 
-          {translations.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-md font-semibold mb-2">
-              Translation preview ({selectedLanguages[0]}):
-            </h3>
-            {translations.map((t) => (
-              <div key={t.id} className="mb-1 text-sm">
-                • {t.translation}
-              </div>
-            ))}
+        {Object.keys(translationsByLang).length > 0 && (
+          <div className="mt-6">
+            <div className="mb-4">
+              <h3 className="text-md font-semibold mb-1">
+                Original – {sourceLanguage.toUpperCase()}
+              </h3>
+              {textElements.map((t, i) => (
+                <div key={t.id} className="text-sm mb-1">
+                  ({i + 1}) {t.text}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <h3 className="text-md font-semibold mb-1">Translated</h3>
+              {selectedLanguages.map((lang) => (
+                <div key={lang} className="mb-4">
+                  <p className="font-semibold">
+                    {lang} – {allLanguages.find(l => l.value === lang)?.label?.split("–")[1]}
+                  </p>
+                  {translationsByLang[lang]?.map((item, i) => (
+                    <div key={item.id} className="mb-2 text-sm flex items-start gap-2">
+                      <span>({i + 1})</span>
+                      <textarea
+                        value={item.translation}
+                        onChange={(e) => {
+                          const updated = [...(translationsByLang[lang] || [])];
+                          updated[i] = { ...updated[i], translation: e.target.value };
+                          setTranslationsByLang({ ...translationsByLang, [lang]: updated });
+                        }}
+                        className="border p-2 rounded w-full"
+                        style={{
+                          height: "auto",
+                          overflow: "hidden",
+                          width: "90%", 
+                          fontSize: "12px",
+                          resize: "none",
+                        }}
+                        onInput={(e) => {
+                          const el = e.target as HTMLTextAreaElement;
+                          el.style.height = "auto";
+                          el.style.height = el.scrollHeight + "px";
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
-
 
         <Button variant="secondary" onClick={() => openExternalUrl(DOCS_URL)}>
           {intl.formatMessage({
             defaultMessage: "Open Canva Apps SDK docs",
-            description:
-              "Button text to open Canva Apps SDK docs. Opens an external URL when pressed.",
+            description: "Button text to open Canva Apps SDK docs.",
           })}
         </Button>
       </Rows>
