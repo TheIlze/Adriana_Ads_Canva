@@ -46,6 +46,7 @@ export const App = () => {
   const [textElements, setTextElements] = useState<{ id: string; text: string }[]>([]);
   const [translationsByLang, setTranslationsByLang] = useState<{ [lang: string]: { id: string; translation: string }[] }>({});
   const [sourceLanguage, setSourceLanguage] = useState<string>("en");
+  const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
     const unregister = selection.registerOnChange({
@@ -85,7 +86,9 @@ export const App = () => {
   };
 
   const translateTexts = async () => {
-    const prompt = `
+    setIsTranslating(true);
+    try {
+      const prompt = `
 You are a professional translator.
 
 Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
@@ -103,27 +106,32 @@ Context: ${context}
 
 Original texts:
 ${JSON.stringify(textElements, null, 2)}
-    `;
+      `;
 
-    const response = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
+      const response = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
 
-    const data = await response.json();
-    setTranslationsByLang(data);
+      const data = await response.json();
+      setTranslationsByLang(data);
 
-    const detectionPrompt = `Detect the language of the following text:\n\n${textElements.map(e => e.text).join("\n")}`;
-    const detectionRes = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: detectionPrompt }),
-    });
+      const detectionPrompt = `Detect the language of the following text:\n\n${textElements.map(e => e.text).join("\n")}`;
+      const detectionRes = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: detectionPrompt }),
+      });
 
-    const detectionData = await detectionRes.json();
-    const detectedLang = detectionData.text?.trim().toLowerCase() || "en";
-    setSourceLanguage(detectedLang);
+      const detectionData = await detectionRes.json();
+      const detectedLang = detectionData.text?.trim().toLowerCase() || "en";
+      setSourceLanguage(detectedLang);
+    } catch (err) {
+      console.error("Tulkošanas kļūda:", err);
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const openExternalUrl = async (url: string) => {
@@ -186,9 +194,33 @@ ${JSON.stringify(textElements, null, 2)}
           </div>
         </div>
 
-        <Button variant="primary" onClick={translateTexts} stretch>
-          Translate
+        <Button variant="primary" onClick={translateTexts} stretch disabled={isTranslating}>
+          {isTranslating ? "Adriana is translating..." : "Translate"}
         </Button>
+
+        {isTranslating && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "12px" }}>
+            <div
+              style={{
+                width: "24px",
+                height: "24px",
+                border: "3px solid #ccc",
+                borderTop: "3px solid #333",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+          </div>
+        )}
+
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
 
         {Object.keys(translationsByLang).length > 0 && (
           <div className="mt-6">
@@ -224,7 +256,7 @@ ${JSON.stringify(textElements, null, 2)}
                         style={{
                           height: "auto",
                           overflow: "hidden",
-                          width: "90%", 
+                          width: "90%",
                           fontSize: "12px",
                           resize: "none",
                         }}
