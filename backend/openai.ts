@@ -22,7 +22,14 @@ export default async function handler(req: Request): Promise<Response> {
       const data = await openaiRes.json();
       const content = data.choices?.[0]?.message?.content || "{}";
   
-      return Response.json(JSON.parse(content));
+      try {
+        const parsed = JSON.parse(content);
+        return Response.json(parsed);
+      } catch (err) {
+        console.error("Could not parse OpenAI response content as JSON:", content);
+        return new Response("Invalid JSON from OpenAI", { status: 500 });
+      }
+  
     } catch (e) {
       console.error("OpenAI error:", e);
       return new Response("Internal Server Error", { status: 500 });

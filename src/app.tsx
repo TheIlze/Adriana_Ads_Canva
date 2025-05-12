@@ -89,8 +89,8 @@ export const App = () => {
     setIsTranslating(true);
     try {
       const prompt = `
-You are a professional translator.
-
+You are a professional translator. You help us in creating marketing materials for products and recipes related to weight loss, keto, fasting, and healthy living. 
+Audience: health-conscious people.
 Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
 Return the result only as a valid JSON object where keys are language codes and values are arrays of:
 [
@@ -98,7 +98,7 @@ Return the result only as a valid JSON object where keys are language codes and 
 ]
 
 Each translation must:
-- be as close in meaning and tone to the original as possible,
+- sound native and as close in meaning and tone to the original as possible,
 - match the original text length as closely as possible (character count),
 - avoid line breaks unless they are in the original.
 
@@ -117,7 +117,11 @@ ${JSON.stringify(textElements, null, 2)}
       const data = await response.json();
       setTranslationsByLang(data);
 
-      const detectionPrompt = `Detect the language of the following text:\n\n${textElements.map(e => e.text).join("\n")}`;
+      const detectionPrompt = `Detect the language of the following text.
+      Return only the result as a JSON object with the format: { "language": "en - English" }
+      Text: ${textElements.map(e => e.text).join("\n")}
+      `;
+      
       const detectionRes = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
