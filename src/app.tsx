@@ -5,6 +5,9 @@ import * as styles from "styles/components.css";
 import { useAddElement } from "utils/use_add_element";
 import { useState, useEffect } from "react";
 import { selection } from "@canva/design";
+import { addPage } from "@canva/design";
+
+
 
 export const DOCS_URL = "https://www.canva.dev/docs/apps/";
 
@@ -275,6 +278,21 @@ ${JSON.stringify(textElements, null, 2)}
                 </div>
               ))}
             </div>
+            <div style={{ textAlign: "center", marginTop: "16px" }}>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                try {
+                  await addPage();
+                  console.log("Tukša lapa pievienota!");
+                } catch (err) {
+                  console.error("Neizdevās pievienot jaunu lapu:", err);
+                }
+              }}
+            >
+              Generate empty page
+            </Button>
+          </div>
           </div>
         )}
 
