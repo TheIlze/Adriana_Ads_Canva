@@ -1,13 +1,9 @@
 import { Button, Rows, MultilineInput } from "@canva/app-ui-kit";
 import { requestOpenExternalUrl } from "@canva/platform";
-import { FormattedMessage, useIntl } from "react-intl";
-import * as styles from "styles/components.css";
-import { useAddElement } from "utils/use_add_element";
 import { useState, useEffect } from "react";
 import { selection } from "@canva/design";
-import { addPage } from "@canva/design";
-
-
+import { useIntl } from "react-intl";
+import { editContent } from "@canva/design";
 
 export const DOCS_URL = "https://www.canva.dev/docs/apps/";
 
@@ -41,7 +37,6 @@ const allLanguages = [
 ];
 
 export const App = () => {
-  const addElement = useAddElement();
   const intl = useIntl();
 
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
@@ -50,6 +45,10 @@ export const App = () => {
   const [translationsByLang, setTranslationsByLang] = useState<{ [lang: string]: { id: string; translation: string }[] }>({});
   const [sourceLanguage, setSourceLanguage] = useState<string>("en");
   const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleAuthorize = () => {
+    window.open("http://127.0.0.1:3001/api/auth", "_blank");
+  };
 
   useEffect(() => {
     const unregister = selection.registerOnChange({
@@ -66,7 +65,7 @@ export const App = () => {
 
           setTextElements(elements);
         } catch (error) {
-          console.error("Neizdevās nolasīt tekstus:", error);
+          console.error("Couldn't read text:", error);
         }
       },
     });
@@ -94,19 +93,16 @@ export const App = () => {
       const prompt = `
 You are a professional translator. You help us in creating marketing materials for products and recipes related to weight loss, keto, fasting, and healthy living. 
 Audience: health-conscious people.
-Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. 
+Translate the following text blocks into ${selectedLanguages.join(", ")} based on the context provided. Before making the translation, please read all the texts to understand their interconnection and context.
 Return the result only as a valid JSON object where keys are language codes and values are arrays of:
 [
   { "id": "abc", "translation": "..." }
 ]
-
 Each translation must:
 - sound native and as close in meaning and tone to the original as possible,
 - match the original text length as closely as possible (character count),
 - avoid line breaks unless they are in the original.
-
 Context: ${context}
-
 Original texts:
 ${JSON.stringify(textElements, null, 2)}
       `;
@@ -124,7 +120,7 @@ ${JSON.stringify(textElements, null, 2)}
       Return only the result as a JSON object with the format: { "language": "en - English" }
       Text: ${textElements.map(e => e.text).join("\n")}
       `;
-      
+
       const detectionRes = await fetch(`${process.env.CANVA_BACKEND_HOST}/api/openai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,7 +131,7 @@ ${JSON.stringify(textElements, null, 2)}
       const detectedLang = detectionData.text?.trim().toLowerCase() || "en";
       setSourceLanguage(detectedLang);
     } catch (err) {
-      console.error("Tulkošanas kļūda:", err);
+      console.error("Translation error:", err);
     } finally {
       setIsTranslating(false);
     }
@@ -148,9 +144,52 @@ ${JSON.stringify(textElements, null, 2)}
     }
   };
 
+  const handleInsertTranslation = async (lang: string) => {
+    try {
+      const translations = translationsByLang[lang];
+      if (!translations) return;
+  
+      await editContent(
+        {
+          target: "current_page",
+          contentType: "richtext",
+        },
+        async (draft) => {
+          draft.contents.forEach((block, index) => {
+            const translated = translations[index];
+            if (!translated) return;
+  
+            const regions = block.readTextRegions();
+            const totalLength = regions.reduce((sum, region) => sum + region.text.length, 0);
+  
+            block.replaceText(
+              { index: 0, length: totalLength },
+              translated.translation
+            );
+          });
+  
+          await draft.sync();
+        }
+      );
+  
+      console.log(`✅ Inserted translations for ${lang}`);
+    } catch (err) {
+      console.error("❌ Could not insert translated text:", err);
+    }
+  };
+  
+  
   return (
     <div className="p-4">
       <Rows spacing="2u">
+        {/* 👇 Button for authotrisation - maybe we will need later */}
+        <Button
+          variant="primary"
+          onClick={handleAuthorize}
+        >
+          Authorise with Canva
+        </Button>
+
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-1">Context for translation</h3>
           <MultilineInput
@@ -200,6 +239,7 @@ ${JSON.stringify(textElements, null, 2)}
             </div>
           </div>
         </div>
+
 
         <Button variant="primary" onClick={translateTexts} stretch disabled={isTranslating}>
           {isTranslating ? "Adriana is translating..." : "Translate"}
@@ -275,33 +315,18 @@ ${JSON.stringify(textElements, null, 2)}
                       />
                     </div>
                   ))}
+                  <Button
+                    variant="primary"
+                    onClick={() => handleInsertTranslation(lang)}
+                  >
+                    Insert
+                  </Button>
                 </div>
               ))}
             </div>
-            <div style={{ textAlign: "center", marginTop: "16px" }}>
-            <Button
-              variant="primary"
-              onClick={async () => {
-                try {
-                  await addPage();
-                  console.log("Tukša lapa pievienota!");
-                } catch (err) {
-                  console.error("Neizdevās pievienot jaunu lapu:", err);
-                }
-              }}
-            >
-              Generate empty page
-            </Button>
-          </div>
+
           </div>
         )}
-
-        <Button variant="secondary" onClick={() => openExternalUrl(DOCS_URL)}>
-          {intl.formatMessage({
-            defaultMessage: "Open Canva Apps SDK docs",
-            description: "Button text to open Canva Apps SDK docs.",
-          })}
-        </Button>
       </Rows>
     </div>
   );
