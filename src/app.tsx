@@ -46,9 +46,13 @@ export const App = () => {
   const [sourceLanguage, setSourceLanguage] = useState<string>("en");
   const [isTranslating, setIsTranslating] = useState(false);
 
+  // === AUTHORIZATION ===
+
   const handleAuthorize = () => {
     window.open("http://127.0.0.1:3001/api/auth", "_blank");
   };
+
+  // === HANDLE TEXT SELECTION FROM CANVA DESIGN ===
 
   useEffect(() => {
     const unregister = selection.registerOnChange({
@@ -73,6 +77,8 @@ export const App = () => {
     return () => unregister();
   }, []);
 
+  // === LANGUAGE SELECTION HANDLERS ===
+
   const isAllSelected = selectedLanguages.length === allLanguages.length;
 
   const toggleLanguage = (value: string) => {
@@ -86,6 +92,8 @@ export const App = () => {
   const toggleAllLanguages = () => {
     setSelectedLanguages(isAllSelected ? [] : allLanguages.map((l) => l.value));
   };
+
+  // === TRANSLATION LOGIC WITH OPENAI ===
 
   const translateTexts = async () => {
     setIsTranslating(true);
@@ -144,6 +152,8 @@ ${JSON.stringify(textElements, null, 2)}
     }
   };
 
+  // === INSERT TRANSLATION BACK INTO CANVA DESIGN ===
+
   const handleInsertTranslation = async (lang: string) => {
     try {
       const translations = translationsByLang[lang];
@@ -182,6 +192,7 @@ ${JSON.stringify(textElements, null, 2)}
   return (
     <div className="p-4">
       <Rows spacing="2u">
+
         {/* 👇 Button for authotrisation - maybe we will need later */}
         <Button
           variant="primary"
@@ -190,6 +201,7 @@ ${JSON.stringify(textElements, null, 2)}
           Authorise with Canva
         </Button>
 
+        {/* Context input */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-1">Context for translation</h3>
           <MultilineInput
@@ -199,6 +211,7 @@ ${JSON.stringify(textElements, null, 2)}
           />
         </div>
 
+        {/* Language selection */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-1">Select languages</h3>
           <div className="flex items-center mb-3">
@@ -240,11 +253,12 @@ ${JSON.stringify(textElements, null, 2)}
           </div>
         </div>
 
-
+        {/* Translate button */}
         <Button variant="primary" onClick={translateTexts} stretch disabled={isTranslating}>
           {isTranslating ? "Adriana is translating..." : "Translate"}
         </Button>
 
+        {/* Loading spinner */}
         {isTranslating && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: "12px" }}>
             <div
@@ -259,7 +273,6 @@ ${JSON.stringify(textElements, null, 2)}
             />
           </div>
         )}
-
         <style>
           {`
             @keyframes spin {
@@ -269,6 +282,7 @@ ${JSON.stringify(textElements, null, 2)}
           `}
         </style>
 
+        {/* Translations preview */}
         {Object.keys(translationsByLang).length > 0 && (
           <div className="mt-6">
             <div className="mb-4">
@@ -315,6 +329,8 @@ ${JSON.stringify(textElements, null, 2)}
                       />
                     </div>
                   ))}
+                  
+                  {/* Button for inserting translations */}
                   <Button
                     variant="primary"
                     onClick={() => handleInsertTranslation(lang)}

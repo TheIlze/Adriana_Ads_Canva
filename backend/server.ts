@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 const PORT = 3001;
 
-// CORS — atļauj Canva lietotnei piekļūt šim serverim
+// CORS — allows Canva to call this server
 app.use(
   cors({
     origin: "https://app-aagmyybgi1q.canva-apps.com",
@@ -20,10 +20,10 @@ app.use(
 
 app.use(express.json());
 
-// ======== GLOBAL STATE (testēšanai) =========
+// ======== GLOBAL STATE (for testing) =========
 (global as any).codeVerifier = null;
 
-// ========== /api/auth — sāk autorizācijas plūsmu =============
+// ========== /api/auth — start authorisation =============
 app.get("/api/auth", (req, res) => {
   const clientId = process.env.CANVA_CLIENT_ID!;
   const redirectUri = "http://127.0.0.1:3001/api/callback";
@@ -40,7 +40,7 @@ app.get("/api/auth", (req, res) => {
   res.redirect(authUrl);
 });
 
-// ========== /api/callback — saņem code un apmaina pret token ============
+// ========== /api/callback — receive code and exchanges it to token ============
 app.get("/api/callback", async (req, res) => {
   const code = req.query.code as string;
   const redirectUri = "http://127.0.0.1:3001/api/callback";
@@ -48,7 +48,7 @@ app.get("/api/callback", async (req, res) => {
   const codeVerifier = (global as any).codeVerifier;
 
   if (!code || !codeVerifier || !clientId) {
-    return res.status(400).send("❌ Trūkst code, verifier vai clientId");
+    return res.status(400).send("❌ Missing code, verifier or clientId");
   }
 
   try {
@@ -77,7 +77,7 @@ app.get("/api/callback", async (req, res) => {
     console.log("🔁 Refresh Token:", data.refresh_token);
     console.log("⏳ Expires In:", data.expires_in);
 
-    return res.send("✅ Autorizācija izdevās. Tagad vari veikt pieprasījumus uz Canva API.");
+    return res.send("✅ Authorisation successful. Now can call Canva API.");
   } catch (error: any) {
     console.error("❌ Token error:", error);
     return res.status(500).send("Token request error");
@@ -114,12 +114,12 @@ app.post("/api/openai", async (req, res) => {
       const parsed = JSON.parse(content);
       res.json(parsed);
     } catch (e) {
-      console.error("❌ Nevarēja parsēt OpenAI atbildi kā JSON:", content);
+      console.error("❌ Couldn't parse OpenAI response as JSON:", content);
       res.status(500).json({ error: "Invalid JSON from OpenAI", raw: content });
     }
 
   } catch (error) {
-    console.error("OpenAI kļūda:", error);
+    console.error("OpenAI error:", error);
     res.status(500).send("Server error");
   }
 });

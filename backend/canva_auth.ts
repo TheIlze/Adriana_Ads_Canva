@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 
 const router = express.Router();
 
-import { generateCodeVerifier, generateCodeChallenge } from "../utils/backend/pkce"; // ja vajag, nomainām ceļu
+import { generateCodeVerifier, generateCodeChallenge } from "../utils/backend/pkce"; // if needed, change the path
 
 router.get("/api/auth", (req, res) => {
   const clientId = process.env.CANVA_CLIENT_ID!;
@@ -12,7 +12,7 @@ router.get("/api/auth", (req, res) => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
-  // Saglabā globāli (vienkāršoti testiem)
+  // Just for tests, will be saved as global variable
   (global as any).codeVerifier = codeVerifier;
 
   const authUrl = `https://www.canva.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
@@ -25,12 +25,12 @@ router.get("/api/auth", (req, res) => {
 
 router.get("/api/callback", async (req, res) => {
   const code = req.query.code as string;
-  const redirectUri = "http://127.0.0.1:3001/api/callback"; // tas pats kas /auth URL
+  const redirectUri = "http://127.0.0.1:3001/api/callback"; // same as /auth URL
   const clientId = process.env.CANVA_CLIENT_ID!;
   if (!clientId) {
     throw new Error("Missing CANVA_CLIENT_ID environment variable");
   }
-  const codeVerifier = (global as any).codeVerifier; // pagaidām glabājam globāli
+  const codeVerifier = (global as any).codeVerifier; // global for now
 
   if (!codeVerifier) {
     return res.status(400).send("Code verifier missing");
@@ -64,8 +64,6 @@ router.get("/api/callback", async (req, res) => {
     console.log("🔁 Refresh Token:", refresh_token);
     console.log("⏳ Expires In:", expires_in);
 
-    // Te vari saglabāt tokenu (piemēram, sesijā vai datubāzē)
-    // (global as any).accessToken = access_token;
 
     res.send("✅ Autorizācija izdevās. Tagad vari sūtīt API pieprasījumus ar šo tokenu.");
   } catch (error: any) {
