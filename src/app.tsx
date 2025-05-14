@@ -195,13 +195,14 @@ ${JSON.stringify(textElements, null, 2)}
     <div className="p-4">
       <Rows spacing="2u">
 
-        {/* 👇 Button for authotrisation - maybe we will need later */}
+        {/* 👇 Button for authotrisation - maybe we will need later
         <Button
           variant="primary"
           onClick={handleAuthorize}
         >
           Authorise with Canva
         </Button>
+        */}
 
         {/* Context input */}
         <div className="mb-4">
