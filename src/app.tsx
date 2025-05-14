@@ -108,6 +108,8 @@ Return the result only as a valid JSON object where keys are language codes and 
 ]
 Each translation must:
 - sound native and as close in meaning and tone to the original as possible,
+- style the text as a conversational and engaging marketing copy,
+- use informal and friendly tone,
 - match the original text length as closely as possible (character count),
 - avoid line breaks unless they are in the original.
 Context: ${context}
