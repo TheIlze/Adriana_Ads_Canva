@@ -1,0 +1,21 @@
+# Backend Dockerfile
+FROM node:20-alpine
+
+# Create app directory
+WORKDIR /app
+
+# Copy only backend files and shared deps
+COPY package*.json tsconfig.json ./
+COPY backend ./backend
+COPY utils ./utils
+COPY scripts ./scripts
+COPY .env.template .env.template
+COPY .env .env
+
+# Install only necessary deps
+RUN npm install
+
+# Copy in environment variables via runtime, not during build
+
+# Start server
+CMD ["npx", "tsx", "backend/server.ts"]

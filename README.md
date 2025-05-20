@@ -53,5 +53,17 @@ utils/ – Helper functions
 The app uses the official Canva SDK and modules
 Built with the Canva Apps SDK Starter Kit
 
+## pre-commit & detect-secrets env setup
+```bash
+cd <project-root>
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install detect-secrets pre-commit
+pre-commit install
+detect-secrets scan > .secrets.baseline
+# Creating and configuring .pre-commit-config.yaml
+```
+
 ## License
 This app is intended for internal use by the Nutrameg team only and must not be distributed or published externally.
